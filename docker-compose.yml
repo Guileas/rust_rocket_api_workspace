@@ -1,0 +1,55 @@
+version: '3'
+services:
+
+  rust_alpine:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile
+    container_name: ${PROJECT_NAME}
+    hostname: rustup.${PROJECT_NAME}.local
+    domainname: ${PROJECT_NAME}.local
+    user: "${UID}:${GID}"
+    tty: true
+    depends_on:
+      - mariadb
+    volumes:
+      - ${FOLDER_PATH}:/rust
+    ports:
+      - ${PORT:-8000}:8000
+    networks:
+       devEnvLocal:
+        aliases:
+          - rust.devEnv.local
+
+  #Mariadb Service
+  mariadb:
+    image: mariadb:10.4
+    container_name: mariadb
+    dns_search: devEnv.local
+    hostname: mariadb.devEnv.local
+    domainname: devEnv.local
+    restart: on-failure:2
+    # Check if Db is switch on
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-upublic", "-ppublic"]
+      interval: 120s
+      timeout: 1s
+      retries: 3
+    networks:
+      devEnvLocal:
+        aliases:
+          - mariadb.devEnv.local
+          - mariadb104.devEnv.local
+    volumes:
+      - ${DB_FOLDER_PATH}:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DATABASE}
+      - MYSQL_USER=${USER}
+      - MYSQL_PASSWORD=${PASSWORD}
+    ports:
+      - "3306:3306"
+
+networks:
+  devEnvLocal:
+    driver: bridge
